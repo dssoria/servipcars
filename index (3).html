@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nueva Carrera</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+        <style>
+            body {
+                background-color: #f8f9fa;
+            }
+
+            #map {
+                height: 450px;
+                border-radius: 12px;
+            }
+
+            .card {
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .form-control {
+                border-radius: 12px;
+            }
+
+            .btn-primary {
+                border-radius: 12px;
+            }
+
+            .info-box {
+                background: #fff;
+                border-radius: 12px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="container py-4">
+            <div class="text-center mb-4">
+                <h1 class="display-6 fw-bold text-primary">
+                    <i class="fas fa-taxi"></i> Nueva Carrera
+                </h1>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <!-- Origen -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">📍 Origen</label>
+                        <div class="input-group">
+                            <input type="text" id="origen" class="form-control" placeholder="Dirección de recogida">
+                            <button class="btn btn-outline-success" id="btnMiUbicacion" title="Usar mi ubicación actual">
+                                <i class="fas fa-location-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Destino -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">🏁 Destino</label>
+                        <input type="text" id="destino" class="form-control" placeholder="¿A dónde vamos?">
+                    </div>
+
+                    <!-- Mapa -->
+                    <div id="map" class="mb-4"></div>
+
+                    <!-- Información de la ruta -->
+                    <div id="info" class="info-box p-3 border d-none">
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-4">
+                                <strong>Distancia:</strong><br>
+                                <span id="dist" class="text-muted">—</span>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <strong>Tiempo aprox:</strong><br>
+                                <span id="time" class="text-muted">—</span>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <strong>Costo estimado:</strong><br>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="costoInput" class="form-control" step="0.01" value="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón Enviar -->
+                    <button id="btnEnviar" class="btn btn-primary w-100 py-3 mt-3 fw-bold">
+                        <i class="fas fa-paper-plane"></i> Enviar por WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Script de Google Maps -->
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places&callback=initMap">
+        </script>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script>
+            let map, directionsService, directionsRenderer;
+            let origenPlace = null;
+            let destinoPlace = null;
+            let distancia = '',
+                tiempo = '',
+                costo = 0;
+            const tarifaKm = 0.50;
+
+            let origenAutocomplete, destinoAutocomplete;
+
+            function initMap() {
+                const centroGuayaquil = {
+                    lat: -2.19616,
+                    lng: -79.88621
+                };
+
+                map = new google.maps.Map(document.getElementById("map"), {
+                    center: centroGuayaquil,
+                    zoom: 13,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: true
+                });
+
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: map,
+                    draggable: true,
+                    suppressMarkers: false
+                });
+
+                const options = {
+                    componentRestrictions: {
+                        country: "ec"
+                    },
+                    fields: ["place_id", "geometry", "formatted_address", "name"]
+                };
+
+                origenAutocomplete = new google.maps.places.Autocomplete(document.getElementById("origen"), options);
+                destinoAutocomplete = new google.maps.places.Autocomplete(document.getElementById("destino"), options);
+
+                origenAutocomplete.addListener("place_changed", () => {
+                    origenPlace = origenAutocomplete.getPlace();
+                    calcularRuta();
+                });
+
+                destinoAutocomplete.addListener("place_changed", () => {
+                    destinoPlace = destinoAutocomplete.getPlace();
+                    calcularRuta();
+                });
+
+                directionsRenderer.addListener("directions_changed", () => {
+                    const result = directionsRenderer.getDirections();
+                    if (result) actualizarInfoDesdeRuta(result);
+                });
+            }
+
+            // Botón Mi Ubicación (sin cambios)
+            document.getElementById("btnMiUbicacion").addEventListener("click", () => {
+                if (!navigator.geolocation) {
+                    alert("Tu navegador no soporta geolocalización");
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const pos = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    map.setCenter(pos);
+                    map.setZoom(16);
+
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({
+                        location: pos
+                    }, (results, status) => {
+                        if (status === "OK" && results[0]) {
+                            document.getElementById("origen").value = results[0].formatted_address;
+                            origenPlace = {
+                                geometry: {
+                                    location: pos
+                                }
+                            };
+                            calcularRuta();
+                        }
+                    });
+                }, () => {
+                    alert("No se pudo obtener tu ubicación.");
+                });
+            });
+
+            function calcularRuta() {
+                if (!origenPlace?.geometry || !destinoPlace?.geometry) return;
+
+                directionsService.route({
+                    origin: origenPlace.geometry.location,
+                    destination: destinoPlace.geometry.location,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                }, (response, status) => {
+                    if (status === "OK") {
+                        directionsRenderer.setDirections(response);
+                        actualizarInfoDesdeRuta(response);
+                    } else {
+                        alert("No se pudo calcular la ruta: " + status);
+                    }
+                });
+            }
+
+            function actualizarInfoDesdeRuta(response) {
+                const leg = response.routes[0].legs[0];
+
+                distancia = leg.distance.text;
+                tiempo = leg.duration.text;
+
+                const km = leg.distance.value / 1000;
+                costo = (km * tarifaKm).toFixed(2);
+
+                document.getElementById("dist").innerText = distancia;
+                document.getElementById("time").innerText = tiempo;
+                document.getElementById("costoInput").value = costo;
+
+                document.getElementById("info").classList.remove("d-none");
+            }
+
+            // ==================== FUNCIÓN PARA GENERAR CÓDIGO ALEATORIO ====================
+            function generarCodigoSeguimiento() {
+                // Genera número aleatorio de 4 dígitos (1000 - 9999)
+                return Math.floor(1000 + Math.random() * 9000);
+            }
+
+            // Botón Enviar por WhatsApp
+            document.getElementById("btnEnviar").addEventListener("click", () => {
+                const origenTxt = document.getElementById("origen").value.trim();
+                const destinoTxt = document.getElementById("destino").value.trim();
+                const costoFinal = parseFloat(document.getElementById("costoInput").value) || costo;
+
+                if (!origenTxt || !destinoTxt) {
+                    alert("Por favor completa el origen y el destino");
+                    return;
+                }
+
+                const codigoSeguimiento = generarCodigoSeguimiento();
+
+                const telefono = "593997756470";
+
+                const mensaje = `🚖 *NUEVA CARRERA #${codigoSeguimiento}*\n\n` +
+                `📍 *Origen:* ${origenTxt}\n` +
+                `🏁 *Destino:* ${destinoTxt}\n` +
+                `📏 *Distancia:* ${distancia || '—'}\n` +
+                `⏱️ *Duración:* ${tiempo || '—'}\n` +
+                `💰 *Costo:* $${costoFinal.toFixed(2)}\n\n` +
+                `🔢 *Código de seguimiento:* #${codigoSeguimiento}\n` +
+                `🗺️ *Ver ruta en Google Maps:* https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving\n\n` +
+                `✅ ¿Listo para recoger?`;
+
+                const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+                window.open(url, '_blank');
+            });
+        </script>
+    </body>
+
+</html>
