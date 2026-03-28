@@ -69,14 +69,13 @@ function enviar() {
         return;
     }
 
-    const telefono = "593997756470";
-
-    const msg = `🚖 NUEVA CARRERA
-Origen: ${origen}
-Destino: ${destino}
-Distancia: ${distancia}
-Tiempo: ${tiempo}
-Costo: $${costo}`;
-
+        const telefono = "593997756470";
+        const msj = `🚖 *NUEVA CARRERRA*\n\n` +
+                    `📍 *Origen:* ${origen}\n` +
+                    `🏁 *Destino:* ${destino}\n` +
+                    `📏 *Distancia:* ${distText}\n` +
+                    `⏳ *Duración:* ${tiempoText}\n` +
+                    `💰 *Costo Est.:* $${costoFinal}\n\n` +
+                    `🗺️ *Ruta:* https://www.google.com/maps/dir/${encodeURIComponent(origen)}/${encodeURIComponent(destino)}`;
     window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`);
 }
