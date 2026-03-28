@@ -40,9 +40,9 @@
     <body>
         <div class="container py-4">
             <div class="text-center mb-4">
-                <h1 class="display-6 fw-bold text-primary">
-                    <i class="fas fa-taxi"></i> Nueva Carrera
-                </h1>
+                <h2 class="display-6 fw-bold text-primary">
+                    <i class="fas fa-taxi"></i> SERVIPCARS.A - Solicitar Carrera
+                </h2>
             </div>
 
             <div class="card">
@@ -249,15 +249,13 @@
 
                 const telefono = "593997756470";
 
-                const mensaje = `🚖 *NUEVA CARRERA #${codigoSeguimiento}*\n\n` +
+                const mensaje = `*NUEVA CARRERA - SERVIPCARS #${codigoSeguimiento}*\n\n` +
                 `📍 *Origen:* ${origenTxt}\n` +
                 `🏁 *Destino:* ${destinoTxt}\n` +
                 `📏 *Distancia:* ${distancia || '—'}\n` +
                 `⏱️ *Duración:* ${tiempo || '—'}\n` +
                 `💰 *Costo:* $${costoFinal.toFixed(2)}\n\n` +
-                `🔢 *Código de seguimiento:* #${codigoSeguimiento}\n` +
-                `🗺️ *Ver ruta en Google Maps:* https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving\n\n` +
-                `✅ ¿Listo para recoger?`;
+                `🗺️ *Ver ruta en Google Maps:* https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving\n\n`;
 
                 const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
                 window.open(url, '_blank');
