@@ -64,18 +64,20 @@ function enviar() {
     const origen = document.getElementById("origen").value;
     const destino = document.getElementById("destino").value;
 
-    if (!origen || !destino) {
-        alert("Completa la ruta");
+    if (!origen || !destino || !distancia || !tiempo || !costo) {
+        alert("Primero calcula la ruta");
         return;
     }
 
-        const telefono = "593997756470";
-        const msj = `🚖 *NUEVA CARRERRA*\n\n` +
-                    `📍 *Origen:* ${origen}\n` +
-                    `🏁 *Destino:* ${destino}\n` +
-                    `📏 *Distancia:* ${distText}\n` +
-                    `⏳ *Duración:* ${tiempoText}\n` +
-                    `💰 *Costo Est.:* $${costoFinal}\n\n` +
-                    `🗺️ *Ruta:* https://www.google.com/maps/dir/${encodeURIComponent(origen)}/${encodeURIComponent(destino)}`;
-    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`);
+    const telefono = "593997756470";
+
+    const msj = `🚖 *NUEVA CARRERA*\n\n` +
+                `📍 *Origen:* ${origen}\n` +
+                `🏁 *Destino:* ${destino}\n` +
+                `📏 *Distancia:* ${distancia}\n` +
+                `⏳ *Duración:* ${tiempo}\n` +
+                `💰 *Costo Est.:* $${costo}\n\n` +
+                `🗺️ *Ruta:* https://www.google.com/maps/dir/${encodeURIComponent(origen)}/${encodeURIComponent(destino)}`;
+
+    window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msj)}`);
 }
