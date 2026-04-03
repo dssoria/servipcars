@@ -163,7 +163,7 @@
                     componentRestrictions: {
                         country: "ec"
                     },
-                    types: ['address', 'establishment'],
+                    types: ['geocode', 'establishment'],
                     language: 'es-EC'
                 };
 
@@ -280,7 +280,7 @@
                 document.getElementById("origen").value = "";
                 if (origenMarker) origenMarker.setMap(null);
                 origenPlace = null;
-                OrigenValido = false;
+                origenValido = false;
                 directionsRenderer.setDirections({
                     routes: []
                 });
