@@ -229,12 +229,15 @@
                     position: location,
                     map: map,
                     icon: {
-                        path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW, // Forma del pin
-                        fillColor: colores[tipo], // Usa el verde o rojo que definiste arriba
+                        // Este "path" es la forma de una gota/pin clásica
+                        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+                        fillColor: colores[tipo], // Aquí ya usará el verde o rojo
                         fillOpacity: 1,
-                        strokeWeight: 2,
-                        strokeColor: "white",
-                        scale: 7 // Tamaño del pin
+                        strokeWeight: 1.5,
+                        strokeColor: "#ffffff",
+                        scale: 2, // Ajusta el tamaño aquí (1.5 a 2.5 suele ser ideal)
+                        anchor: new google.maps.Point(12, 22), // Centra la punta del pin en la coordenada
+                        labelOrigin: new google.maps.Point(12, 9) // Centra la letra (A o B) dentro de la cabeza del pin
                     },
                     label: {
                         text: label,
