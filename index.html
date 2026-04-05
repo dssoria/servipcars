@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SERVIPCARS.A</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+        <style>
+            body {
+                background-color: #f8f9fa;
+            }
+
+            #map {
+                height: 450px;
+                border-radius: 12px;
+            }
+
+            .card {
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .form-control {
+                border-radius: 12px;
+            }
+
+            .input-group .btn-clear {
+                border-radius: 0 12px 12px 0;
+            }
+
+            .hora-pico {
+                color: #d63384;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="container py-4">
+            <div class="text-center mb-4">
+                <h1 class="display-6 fw-bold text-primary">
+                    <i class="fas fa-taxi"></i>SERVIPCARS.A
+                </h1>
+                <div class="mt-2">
+                    <!-- Número de WhatsApp clickeable -->
+                    <a href="https://wa.me/593991874475" target="_blank" id="whatsappLink" class="text-decoration-none d-inline-flex align-items-center gap-2">
+                        <i class="fas fa-phone-alt text-success"></i>
+                        <span class="fw-semibold text-dark">0991874475</span>
+                    </a>
+
+                    <!-- Texto de ayuda que desaparece completamente -->
+                    <div id="ayudaWhatsApp" class="text-muted small mt-1" style="display: none;">
+                        📲 Toca el número para contactar por WhatsApp.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+
+                    <!-- Origen -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">📍 Origen</label>
+                        <div class="input-group">
+                            <input type="text" id="origen" class="form-control" placeholder="¿Dónde te encuentras?">
+                            <button class="btn btn-outline-danger btn-clear" id="clearOrigen" title="Borrar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn btn-outline-success" id="btnMiUbicacion" title="Mi ubicación">
+                                <i class="fas fa-location-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Destino -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">🏁 Destino</label>
+                        <div class="input-group">
+                            <input type="text" id="destino" class="form-control" placeholder="¿A dónde te diriges?">
+                            <button class="btn btn-outline-danger btn-clear" id="clearDestino" title="Borrar">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Método de pago -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">💵 Método de pago</label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="efectivo" value="Efectivo" checked>
+                                <label class="form-check-label" for="efectivo"><i class="fas fa-money-bill-wave"></i> Efectivo</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="transferencia" value="Transferencia">
+                                <label class="form-check-label" for="transferencia"><i class="fas fa-bank"></i> Transferencia</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa -->
+                    <div id="map" class="mb-4"></div>
+
+                    <!-- Información -->
+                    <div id="info" class="info-box p-3 border d-none">
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-4">
+                                <strong>Distancia:</strong><br><span id="dist" class="text-muted">—</span>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <strong>Tiempo aprox:</strong><br><span id="time" class="text-muted">—</span>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <strong>Precio estimado:</strong><br>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" id="costoInput" class="form-control" step="0.50" value="2.50" min="2.50">
+                                    <button class="btn btn-outline-success btn-confirm-cost d-none" id="btnConfirmarCosto" title="Confirmar costo">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                                <small id="infoHora" class="hora-pico"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="btnEnviar" class="btn btn-primary w-100 py-3 mt-3 fw-bold">
+                        <i class="fas fa-paper-plane"></i> Enviar por WhatsApp
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBg4RnlXz7vmvsu_tm7jVUdQFA1y5kRqqU&libraries=places&callback=initMap&loading=async">
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script>
+            let map, directionsService, directionsRenderer;
+            let origenPlace = null,
+                destinoPlace = null;
+            let geocoder;
+            let distancia = '',
+                tiempo = '';
+            let costoFinalCalculado = 2.50;
+            let origenValido = false;
+            let destinoValido = false;
+            const tarifaBase = 0.50;
+            let marcadores = {}; // Almacenar referencias a los marcadores
+
+            function initMap() {
+                geocoder = new google.maps.Geocoder();
+                const centro = {
+                    lat: -2.19616,
+                    lng: -79.88621
+                };
+
+                map = new google.maps.Map(document.getElementById("map"), {
+                    center: centro,
+                    zoom: 13,
+                    mapTypeControl: false,
+                    streetViewControl: false
+                });
+
+                directionsService = new google.maps.DirectionsService();
+                directionsRenderer = new google.maps.DirectionsRenderer({
+                    map: map,
+                    draggable: false,
+                    suppressMarkers: true, // ✓ CAMBIO: Suprimimos los marcadores de DirectionsRenderer
+                    polylineOptions: {
+                        strokeColor: '#007bff',
+                        strokeWeight: 5
+                    }
+                });
+
+                const options = {
+                    componentRestrictions: {
+                        country: "ec"
+                    },
+                    types: ['geocode', 'establishment'],
+                    language: 'es-EC'
+                };
+
+                const origenAuto = new google.maps.places.Autocomplete(document.getElementById("origen"), options);
+                const destinoAuto = new google.maps.places.Autocomplete(document.getElementById("destino"), options);
+
+                // Origen - Autocomplete
+                origenAuto.addListener("place_changed", () => {
+                    origenPlace = origenAuto.getPlace();
+
+                    if (origenPlace.geometry && origenPlace.formatted_address) {
+                        origenValido = true;
+                        crearMarker(origenPlace.geometry.location, 'A', 'origen');
+                        calcularRuta();
+                    } else {
+                        origenValido = false;
+                    }
+                });
+
+                // Destino - Autocomplete
+                destinoAuto.addListener("place_changed", () => {
+                    destinoPlace = destinoAuto.getPlace();
+
+                    if (destinoPlace.geometry && destinoPlace.formatted_address) {
+                        destinoValido = true;
+                        crearMarker(destinoPlace.geometry.location, 'B', 'destino');
+                        calcularRuta();
+                    } else {
+                        destinoValido = false;
+                    }
+                });
+            }
+
+            // ✓ NUEVO: Crear marcadores personalizados con etiquetas A y B
+            function crearMarker(location, label, tipo) {
+                // Limpiar marcador anterior si existe
+                if (marcadores[tipo]) {
+                    marcadores[tipo].setMap(null);
+                }
+
+                const colores = {
+                    'A': '#28a745', // Verde para origen
+                    'B': '#dc3545' // Rojo para destino
+                };
+
+                const marcador = new google.maps.Marker({
+                    position: location,
+                    map: map,
+                    label: {
+                        text: label,
+                        color: "white",
+                        fontSize: "16px",
+                        fontWeight: "bold"
+                    },
+                    draggable: true,
+                    title: tipo === 'A' ? 'Origen' : 'Destino'
+                });
+
+                // Evento cuando se arrastra el marcador
+                marcador.addListener('dragend', () => {
+                    const nuevaUbicacion = marcador.getPosition();
+
+                    if (tipo === 'A') {
+                        origenPlace = {
+                            geometry: {
+                                location: nuevaUbicacion
+                            }
+                        };
+                        // Obtener la dirección desde las coordenadas
+                        geocoder.geocode({
+                            location: nuevaUbicacion
+                        }, (results, status) => {
+                            if (status === "OK" && results[0]) {
+                                document.getElementById("origen").value = results[0].formatted_address;
+                            }
+                        });
+                    } else {
+                        destinoPlace = {
+                            geometry: {
+                                location: nuevaUbicacion
+                            }
+                        };
+                        // Obtener la dirección desde las coordenadas
+                        geocoder.geocode({
+                            location: nuevaUbicacion
+                        }, (results, status) => {
+                            if (status === "OK" && results[0]) {
+                                document.getElementById("destino").value = results[0].formatted_address;
+                            }
+                        });
+                    }
+
+                    map.setCenter(nuevaUbicacion);
+                    calcularRuta();
+                });
+
+                marcadores[tipo] = marcador;
+                map.setCenter(location);
+                map.setZoom(15);
+            }
+
+            // Botones de borrar
+            document.getElementById("clearOrigen").addEventListener("click", () => {
+                document.getElementById("origen").value = "";
+                origenPlace = null;
+                origenValido = false;
+                if (marcadores['A']) {
+                    marcadores['A'].setMap(null);
+                    marcadores['A'] = null;
+                }
+                limpiarInfoRuta();
+            });
+
+            document.getElementById("clearDestino").addEventListener("click", () => {
+                document.getElementById("destino").value = "";
+                destinoPlace = null;
+                destinoValido = false;
+                if (marcadores['B']) {
+                    marcadores['B'].setMap(null);
+                    marcadores['B'] = null;
+                }
+                limpiarInfoRuta();
+            });
+
+            // Botón Mi Ubicación
+            document.getElementById("btnMiUbicacion").addEventListener("click", () => {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const location = {
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude
+                    };
+
+                    geocoder.geocode({
+                        location
+                    }, (results, status) => {
+                        if (status === "OK" && results[0]) {
+                            const direccion = results[0].formatted_address;
+
+                            document.getElementById("origen").value = direccion;
+                            origenPlace = {
+                                geometry: {
+                                    location
+                                }
+                            };
+
+                            origenValido = true;
+                            crearMarker(location, 'A', 'origen');
+                            calcularRuta();
+                        }
+                    });
+                }, () => {
+                    alert("No se pudo obtener tu ubicación. Por favor activa el GPS.");
+                });
+            });
+
+            // Detectar borrado manual en los campos
+            document.getElementById("origen").addEventListener("input", function() {
+                if (this.value.trim() === "") {
+                    origenValido = false;
+                    origenPlace = null;
+                    if (marcadores['A']) {
+                        marcadores['A'].setMap(null);
+                        marcadores['A'] = null;
+                    }
+                    limpiarInfoRuta();
+                }
+            });
+
+            document.getElementById("destino").addEventListener("input", function() {
+                if (this.value.trim() === "") {
+                    destinoValido = false;
+                    destinoPlace = null;
+                    if (marcadores['B']) {
+                        marcadores['B'].setMap(null);
+                        marcadores['B'] = null;
+                    }
+                    limpiarInfoRuta();
+                }
+            });
+
+            function calcularRuta() {
+                if (!origenPlace?.geometry || !destinoPlace?.geometry) return;
+                const ahora = new Date();
+
+                directionsService.route({
+                    origin: origenPlace.geometry.location,
+                    destination: destinoPlace.geometry.location,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    drivingOptions: {
+                        departureTime: ahora,
+                        trafficModel: google.maps.TrafficModel.BEST_GUESS
+                    }
+                }, (response, status) => {
+                    if (status === "OK") {
+                        directionsRenderer.setDirections(response);
+                        actualizarInfoDesdeRuta(response);
+                    } else {
+                        console.error("Error al calcular la ruta:", status);
+                        alert("No se pudo calcular la ruta. Por favor verifica las direcciones.");
+                    }
+                });
+            }
+
+            function actualizarInfoDesdeRuta(response) {
+                const leg = response.routes[0].legs[0];
+                distancia = leg.distance.text;
+                if (leg.duration_in_traffic) {
+                    tiempo = leg.duration_in_traffic.text;
+                } else {
+                    tiempo = leg.duration.text;
+                }
+                const km = leg.distance.value / 1000;
+
+                let costo = km * tarifaBase;
+                costo = Math.ceil(costo / 0.5) * 0.5;
+                if (costo < 2.50) costo = 2.50;
+
+                const ahora = new Date();
+                const diaSemana = ahora.getDay();
+                const horaDecimal = ahora.getHours() + ahora.getMinutes() / 60;
+                const esDiaLaboral = (diaSemana >= 1 && diaSemana <= 5);
+
+                const esHoraPico = esDiaLaboral &&
+                ((horaDecimal >= 6 && horaDecimal <= 9.5) ||
+                    (horaDecimal >= 16.25 && horaDecimal <= 19));
+
+                let costoFinal = costo;
+                let mensajeHora = "";
+
+                if (esHoraPico) {
+                    costoFinal = costo * 1.2;
+                    costoFinal = Math.ceil(costoFinal / 0.5) * 0.5;
+                    mensajeHora = "🟡 Hora Pico - Lunes a Viernes";
+                }
+
+                costoFinalCalculado = costoFinal;
+
+                document.getElementById("dist").innerText = distancia;
+                document.getElementById("time").innerHTML = tiempo;
+                document.getElementById("costoInput").value = costoFinal.toFixed(2);
+                document.getElementById("infoHora").innerHTML = mensajeHora;
+                document.getElementById("info").classList.remove("d-none");
+            }
+
+            function generarCodigoSeguimiento() {
+                return Math.floor(1000 + Math.random() * 9000);
+            }
+
+            function limpiarInfoRuta() {
+                distancia = '';
+                tiempo = '';
+                costoFinalCalculado = 2.50;
+
+                document.getElementById("dist").innerText = "—";
+                document.getElementById("time").innerText = "—";
+                document.getElementById("costoInput").value = "2.50";
+
+                document.getElementById("info").classList.add("d-none");
+
+                if (directionsRenderer) {
+                    directionsRenderer.setDirections({
+                        routes: []
+                    });
+                }
+
+                const btnConfirmarCosto = document.getElementById("btnConfirmarCosto");
+                if (btnConfirmarCosto) btnConfirmarCosto.classList.add("d-none");
+            }
+
+            // ====================== COSTO EDITABLE CON BOTÓN ✓ ======================
+            const costoInput = document.getElementById("costoInput");
+            const btnConfirmarCosto = document.getElementById("btnConfirmarCosto");
+
+            let costoFueEditado = false;
+
+            costoInput.addEventListener("focus", function() {
+                btnConfirmarCosto.classList.remove("d-none");
+            });
+
+            costoInput.addEventListener("input", function() {
+                const valor = parseFloat(this.value);
+
+                if (!isNaN(valor)) {
+                    costoFueEditado = true;
+
+                    if (valor < 2.50) {
+                        this.style.borderColor = "#dc3545";
+                    } else if (valor > 999) {
+                        this.style.borderColor = "#dc3545";
+                    } else {
+                        this.style.borderColor = "";
+                    }
+
+                    btnConfirmarCosto.classList.remove("d-none");
+                }
+            });
+
+            btnConfirmarCosto.addEventListener("click", function() {
+                let valor = parseFloat(costoInput.value);
+
+                if (isNaN(valor) || valor < 2.50) {
+                    alert("❌ El costo mínimo permitido es $2.50");
+                    costoInput.value = "2.50";
+                    costoFinalCalculado = 2.50;
+                    btnConfirmarCosto.classList.add("d-none");
+                    return;
+                }
+
+                if (valor > 999) {
+                    alert("❌ El costo máximo permitido es $999.00");
+                    costoInput.value = "999.00";
+                    valor = 999;
+                }
+
+                valor = Math.round(valor * 100) / 100;
+                costoInput.value = valor.toFixed(2);
+                costoFinalCalculado = valor;
+
+                btnConfirmarCosto.classList.add("d-none");
+
+                costoInput.style.borderColor = "#198754";
+                setTimeout(() => {
+                    costoInput.style.borderColor = "";
+                }, 1500);
+            });
+
+            costoInput.addEventListener("blur", function() {
+                let valor = parseFloat(this.value);
+
+                if (!isNaN(valor)) {
+                    if (valor < 2.50) valor = 2.50;
+                    if (valor > 999) valor = 999;
+
+                    valor = Math.round(valor * 100) / 100;
+                    this.value = valor.toFixed(2);
+                    costoFinalCalculado = valor;
+                    btnConfirmarCosto.classList.add("d-none");
+                }
+            });
+
+            // ====================== WHATSAPP HELP TEXT ======================
+            const ayudaWhatsApp = document.getElementById("ayudaWhatsApp");
+
+            function mostrarAyudaWhatsApp() {
+                ayudaWhatsApp.style.display = "block";
+
+                setTimeout(() => {
+                    ayudaWhatsApp.style.display = "none";
+                }, 3000);
+            }
+
+            setTimeout(() => {
+                mostrarAyudaWhatsApp();
+            }, 1000);
+
+            // ====================== Botón Enviar ======================
+            document.getElementById("btnEnviar").addEventListener("click", () => {
+                const origenTxt = document.getElementById("origen").value.trim();
+                const destinoTxt = document.getElementById("destino").value.trim();
+                const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
+
+                if (!origenTxt || !destinoTxt) {
+                    alert("❌ Por favor completa los campos de Origen y Destino");
+                    return;
+                }
+
+                if (!origenValido) {
+                    alert("❌ Origen inválido.\n\nPor favor seleccione un punto de referencia cercano y luego mueva el pin (A) al lugar correcto.");
+                    return;
+                }
+
+                if (!destinoValido) {
+                    alert("❌ Destino inválido.\n\nPor favor seleccione un punto de referencia cercano y luego mueva el pin (B) al lugar correcto.");
+                    return;
+                }
+
+                const codigo = generarCodigoSeguimiento();
+                const rutaUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving`;
+
+                const mensaje = `*SERVIPCARS.A - CARRERA #${codigo}*\n\n` +
+                `📍 *Origen:* ${origenTxt}\n` +
+                `🏁 *Destino:* ${destinoTxt}\n` +
+                `📏 *Distancia:* ${distancia || '—'}\n` +
+                `⏱️ *Duración:* ${tiempo || '—'}\n` +
+                `💰 *Precio:* $${costoFinalCalculado.toFixed(2)}\n` +
+                `💳 *Pago:* ${metodoPago}\n\n` +
+                `🗺️ *Ver ruta en Google Maps:* ${rutaUrl}`;
+
+                window.open(`https://wa.me/593991874475?text=${encodeURIComponent(mensaje)}`, '_blank');
+            });
+        </script>
+    </body>
+
+</html>
