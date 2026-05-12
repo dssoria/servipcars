@@ -78,46 +78,6 @@ function initMap() {
 }
 
 /**
- * Obtiene la jerarquía inmediata superior (premise, barrio o sublocality) de una ubicación
- * @param {Object} location - Objeto con lat y lng de la ubicación
- * @param {function} callback - Función callback que recibe el resultado
- * @returns {string|null} Nombre del premise, barrio o sublocality, o null si no se encuentra
- */
-function obtenerJerarquiaSuperior(location, callback) {
-    if (!geocoder) {
-        console.error("Geocoder no está inicializado");
-        callback(null);
-        return;
-    }
-
-    geocoder.geocode({ location: location }, (results, status) => {
-        if (status === "OK" && results[0]) {
-            const addressComponents = results[0].address_components;
-
-            // Jerarquía de búsqueda: premise -> neighborhood -> sublocality
-            const jerarquiaTipos = ['premise', 'neighborhood', 'sublocality'];
-
-            for (const tipo of jerarquiaTipos) {
-                const componente = addressComponents.find(component =>
-                    component.types.includes(tipo)
-                );
-
-                if (componente) {
-                    callback(componente.long_name);
-                    return;
-                }
-            }
-
-            // Si no se encuentra ninguno de los tipos especificados
-            callback(null);
-        } else {
-            console.error("Error en geocodificación inversa:", status);
-            callback(null);
-        }
-    });
-}
-
-/**
  * Crea marcadores personalizados en el mapa con etiquetas (A para origen, B para destino)
  * @param {Object} location - Coordenadas del marcador (lat, lng)
  * @param {string} label - Etiqueta del marcador ('A' o 'B')
@@ -505,7 +465,61 @@ setTimeout(() => {
     mostrarAyudaWhatsApp();
 }, 1000);
 
+/**
+ * Obtiene la jerarquía inmediata: Premise > Neighborhood > Sublocality_level_1
+ * @param {string} address - Dirección o código plus (ej: "Mall del sur, Guayaquil, Ecuador")
+ * @returns {Promise<string>}
+ */
+async function getImmediateLocationHierarchy(address) {
+    
+    if (!google || !google.maps || !google.maps.Geocoder) {
+        console.error("Google Maps API no está cargada");
+        return "Error: Google Maps no cargado";
+    }
 
+    const geocoder = new google.maps.Geocoder();
+
+    try {
+        const response = await new Promise((resolve, reject) => {
+            geocoder.geocode({ address: address }, (results, status) => {
+                if (status === "OK") {
+                    resolve(results);
+                } else {
+                    reject(status);
+                }
+            });
+        });
+
+        const components = response[0].address_components;
+
+        let premise = null;
+        let neighborhood = null;
+        let sublocality = null;
+
+        for (const component of components) {
+            const types = component.types;
+
+            if (types.includes("premise")) {
+                premise = component.long_name;
+            } else if (types.includes("neighborhood")) {
+                neighborhood = component.long_name;
+            } else if (types.includes("sublocality_level_1")) {
+                sublocality = component.long_name;
+            }
+        }
+
+        // Prioridad: premise → neighborhood → sublocality_level_1
+        if (premise) return premise;
+        if (neighborhood) return neighborhood;
+        if (sublocality) return sublocality;
+
+        return "Sin información";
+
+    } catch (status) {
+        console.error("Geocoder error:", status);
+        return `Error: ${status}`;
+    }
+}
 
 /**
  * Gestiona el evento de envío de la carrera por WhatsApp
@@ -532,9 +546,10 @@ document.getElementById("btnEnviar").addEventListener("click", () => {
         return;
     }
 
+    
     const codigo = generarCodigoSeguimiento();
     const rutaUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving`;
-
+    
     const mensaje = `*SERVIPCARS.A - CARRERA #${codigo}*\n\n` +
     `📍 *Origen:* ${origenTxt}\n` +
     `🏁 *Destino:* ${destinoTxt}\n` +
@@ -546,35 +561,3 @@ document.getElementById("btnEnviar").addEventListener("click", () => {
 
     window.open(`https://wa.me/593991874475?text=${encodeURIComponent(mensaje)}`, '_blank');
 });
-
-/*
- * EJEMPLO DE USO DE LA FUNCIÓN obtenerJerarquiaSuperior()
- *
- * // Para obtener la jerarquía de una ubicación específica:
- * const ubicacion = { lat: -2.19616, lng: -79.88621 }; // Ejemplo: Guayaquil, Ecuador
- *
- * obtenerJerarquiaSuperior(ubicacion, (resultado) => {
- *     if (resultado) {
- *         console.log("Jerarquía encontrada:", resultado);
- *         // Ejemplo de salida: "Centro Histórico" (barrio/neighborhood)
- *         // o "Edificio Principal" (premise)
- *         // o "Urdesa" (sublocality)
- *     } else {
- *         console.log("No se encontró jerarquía superior");
- *     }
- * });
- *
- * // También se puede usar cuando se obtiene la ubicación actual:
- * navigator.geolocation.getCurrentPosition(pos => {
- *     const location = {
- *         lat: pos.coords.latitude,
- *         lng: pos.coords.longitude
- *     };
- *
- *     obtenerJerarquiaSuperior(location, (barrio) => {
- *         if (barrio) {
- *             console.log("Estás en:", barrio);
- *         }
- *     });
- * });
- */
