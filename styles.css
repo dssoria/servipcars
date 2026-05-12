@@ -1,0 +1,27 @@
+body {
+    background-color: #f8f9fa;
+}
+
+#map {
+    height: 30vh;
+    max-height: 450px;
+    border-radius: 12px;
+}
+
+.card {
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.form-control {
+    border-radius: 12px;
+}
+
+.input-group .btn-clear {
+    border-radius: 0 12px 12px 0;
+}
+
+.hora-pico {
+    color: #d63384;
+    font-weight: bold;
+}
