@@ -466,67 +466,11 @@ setTimeout(() => {
 }, 1000);
 
 /**
- * Obtiene la jerarquía inmediata: Premise > Neighborhood > Sublocality_level_1
- * @param {string} address - Dirección o código plus (ej: "Mall del sur, Guayaquil, Ecuador")
- * @returns {Promise<string>}
- */
-async function getImmediateLocationHierarchy(address) {
-    
-    if (!google || !google.maps || !google.maps.Geocoder) {
-        console.error("Google Maps API no está cargada");
-        return "Error: Google Maps no cargado";
-    }
-
-    const geocoder = new google.maps.Geocoder();
-
-    try {
-        const response = await new Promise((resolve, reject) => {
-            geocoder.geocode({ address: address }, (results, status) => {
-                if (status === "OK") {
-                    resolve(results);
-                } else {
-                    reject(status);
-                }
-            });
-        });
-
-        const components = response[0].address_components;
-
-        let premise = null;
-        let neighborhood = null;
-        let sublocality = null;
-
-        for (const component of components) {
-            const types = component.types;
-
-            if (types.includes("premise")) {
-                premise = component.long_name;
-            } else if (types.includes("neighborhood")) {
-                neighborhood = component.long_name;
-            } else if (types.includes("sublocality_level_1")) {
-                sublocality = component.long_name;
-            }
-        }
-
-        // Prioridad: premise → neighborhood → sublocality_level_1
-        if (premise) return premise;
-        if (neighborhood) return neighborhood;
-        if (sublocality) return sublocality;
-
-        return "Sin información";
-
-    } catch (status) {
-        console.error("Geocoder error:", status);
-        return `Error: ${status}`;
-    }
-}
-
-/**
  * Gestiona el evento de envío de la carrera por WhatsApp
  * Valida que origen y destino sean válidos y construye el mensaje con toda la información
  * Abre WhatsApp con el mensaje precompuesto
  */
-document.getElementById("btnEnviar").addEventListener("click", async() => {
+document.getElementById("btnEnviar").addEventListener("click", () => {
     const origenTxt = document.getElementById("origen").value.trim();
     const destinoTxt = document.getElementById("destino").value.trim();
     const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
@@ -544,33 +488,19 @@ document.getElementById("btnEnviar").addEventListener("click", async() => {
     if (!destinoValido) {
         alert("❌ Destino inválido.\n\nPor favor seleccione un punto de referencia cercano y luego mueva el pin (B) al lugar correcto.");
         return;
-    }
-
-    let orX = "";
-    let deX = "";
-    try {
-        orX = await getImmediateLocationHierarchy(origenTxt);
-        deX = await getImmediateLocationHierarchy(destinoTxt);
-        
-        console.log("Origen obtenido:", orX);
-        console.log("Destino obtenido:", deX);
-    } catch (error) {
-        console.error("Error al obtener las jerarquías de ubicación:", error);
-        alert("❌ Ocurrió un error al procesar las direcciones. Inténtalo de nuevo.");
-        return; // Detiene la ejecución si falla la API externa
-    }        
+    }       
 
     const codigo = generarCodigoSeguimiento();
     const rutaUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving`;
     
     const mensaje = `*SERVIPCARS.A - CARRERA #${codigo}*\n\n` +
-    `📍 *Origen:* ${orX}\n` +
-    `🏁 *Destino:* ${deX}\n` +
+    `📍 *De:* ${origenTxt}\n` +
+    `🏁 *A:* ${destinoTxt}\n` +
     `📏 *Distancia:* ${distancia || '—'}\n` +
     `⏱️ *Duración:* ${tiempo || '—'}\n` +
     `💰 *Precio:* $${costoFinalCalculado.toFixed(2)}\n` +
     `💳 *Pago:* ${metodoPago}\n\n` +
-    `🗺️ *Ver ruta en Google Maps:* ${rutaUrl}`;
+    `🗺️ *Ubicación en Google Maps:* ${rutaUrl}`;
 
     window.open(`https://wa.me/593991874475?text=${encodeURIComponent(mensaje)}`, '_blank');
 });
