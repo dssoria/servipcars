@@ -526,7 +526,7 @@ async function getImmediateLocationHierarchy(address) {
  * Valida que origen y destino sean válidos y construye el mensaje con toda la información
  * Abre WhatsApp con el mensaje precompuesto
  */
-document.getElementById("btnEnviar").addEventListener("click", () => {
+document.getElementById("btnEnviar").addEventListener("click", async() => {
     const origenTxt = document.getElementById("origen").value.trim();
     const destinoTxt = document.getElementById("destino").value.trim();
     const metodoPago = document.querySelector('input[name="metodoPago"]:checked').value;
@@ -546,13 +546,26 @@ document.getElementById("btnEnviar").addEventListener("click", () => {
         return;
     }
 
-    
+    let orX = "";
+    let deX = "";
+    try {
+        orX = await getImmediateLocationHierarchy(origenTxt);
+        deX = await getImmediateLocationHierarchy(destinoTxt);
+        
+        console.log("Origen obtenido:", orX);
+        console.log("Destino obtenido:", deX);
+    } catch (error) {
+        console.error("Error al obtener las jerarquías de ubicación:", error);
+        alert("❌ Ocurrió un error al procesar las direcciones. Inténtalo de nuevo.");
+        return; // Detiene la ejecución si falla la API externa
+    }        
+
     const codigo = generarCodigoSeguimiento();
     const rutaUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving`;
     
     const mensaje = `*SERVIPCARS.A - CARRERA #${codigo}*\n\n` +
-    `📍 *Origen:* ${origenTxt}\n` +
-    `🏁 *Destino:* ${destinoTxt}\n` +
+    `📍 *Origen:* ${orX}\n` +
+    `🏁 *Destino:* ${deX}\n` +
     `📏 *Distancia:* ${distancia || '—'}\n` +
     `⏱️ *Duración:* ${tiempo || '—'}\n` +
     `💰 *Precio:* $${costoFinalCalculado.toFixed(2)}\n` +
