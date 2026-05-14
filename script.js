@@ -493,7 +493,7 @@ document.getElementById("btnEnviar").addEventListener("click", () => {
     const codigo = generarCodigoSeguimiento();
     const rutaUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTxt)}&destination=${encodeURIComponent(destinoTxt)}&travelmode=driving`;
     
-    const mensaje = `*SERVIPCARS.A - CARRERA #${codigo}*\n\n` +
+    const mensaje = `*CARRERA #${codigo}*\n\n` +
     `📍 *De:* ${origenTxt}\n` +
     `🏁 *A:* ${destinoTxt}\n` +
     `📏 *Distancia:* ${distancia || '—'}\n` +
